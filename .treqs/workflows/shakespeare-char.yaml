@@ -28,7 +28,7 @@ prepare:
 train:
   command: |
     export PATH=/opt/pytorch/bin:$PATH
-    export ROAR_WANDB_TO_TRACKIO=1 TRACKIO_SPACE_ID=reproducible-ai/experiments DO_NOT_TRACK=1
+    export ROAR_WANDB_TO_TRACKIO=1 TRACKIO_SPACE_ID=reproducible-ai/experiments DO_NOT_TRACK=1 PYTHONUNBUFFERED=1
     roar run -- python train.py config/train_shakespeare_char.py \
       --device=cuda --compile=False \
       --wandb_log=True --wandb_project=nanogpt-shakespeare-char --wandb_run_name=repro-t4
