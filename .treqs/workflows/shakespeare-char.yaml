@@ -1,0 +1,35 @@
+name: nanoGPT reproduction — shakespeare_char (native lineage)
+
+# First real campaign row (breadth-first). Reproduces nanoGPT's char-level
+# Shakespeare model to the documented ~1.47 val loss. Pinned to the ci001 AMI's
+# baked /opt/pytorch env (py3.12: torch 2.7cu128, roar-cli 0.4.1, trackio, the
+# wandb->trackio .pth shim). trace:off + explicit `roar run` keeps tracer/child
+# same-ABI. Variation note: nanoGPT also documents an OpenWebText->GPT-2 124M
+# reproduction (heavy) — enqueued in variations-queue.md, deferred breadth-first.
+
+secrets:
+  - HF_TOKEN            # wandb->trackio shim syncs the experiment to reproducible-ai/experiments
+
+setup:
+  command: |
+    export PATH=/opt/pytorch/bin:$PATH
+    python -m pip install --quiet requests || true
+    roar --version
+    roar init || true
+    roar config set git.push_tags_on_register never || true
+  trace: off
+
+prepare:
+  command: |
+    export PATH=/opt/pytorch/bin:$PATH
+    roar run -- python data/shakespeare_char/prepare.py
+  trace: off
+
+train:
+  command: |
+    export PATH=/opt/pytorch/bin:$PATH
+    export ROAR_WANDB_TO_TRACKIO=1 TRACKIO_SPACE_ID=reproducible-ai/experiments DO_NOT_TRACK=1
+    roar run -- python train.py config/train_shakespeare_char.py \
+      --device=cuda --compile=False \
+      --wandb_log=True --wandb_project=nanogpt-shakespeare-char --wandb_run_name=repro-t4
+  trace: off
