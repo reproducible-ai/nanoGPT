@@ -1,2 +1,15 @@
+.DS_Store
+.idea
+.ipynb_checkpoints/
+.vscode
+__pycache__/
+*.bin
+*.pkl
+*.pt
+*.pyc
+input.txt
+env/
+venv/
+# campaign / roar
 .roar/
 out-shakespeare-char/
