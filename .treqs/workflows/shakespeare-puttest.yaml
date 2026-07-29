@@ -1,0 +1,38 @@
+name: nanoGPT put-test (truncated + roar put -> HF)
+
+# Truncated (max_iters=50) to validate the roar put -> HF -> downloadLocation
+# path under treqs orchestration before the full converged run. Pinned to
+# /opt/pytorch (baked roar 0.4.1 + shimfix). trace:off + explicit roar run.
+
+secrets:
+  - HF_TOKEN
+
+setup:
+  command: |
+    export PATH=/opt/pytorch/bin:$PATH
+    python -m pip install --quiet requests || true
+    roar --version
+    roar init || true
+    roar config set git.push_tags_on_register never || true
+  trace: off
+
+prepare:
+  command: |
+    export PATH=/opt/pytorch/bin:$PATH
+    roar run -- python data/shakespeare_char/prepare.py
+  trace: off
+
+train:
+  command: |
+    export PATH=/opt/pytorch/bin:$PATH
+    export ROAR_WANDB_TO_TRACKIO=1 TRACKIO_SPACE_ID=reproducible-ai/experiments DO_NOT_TRACK=1 PYTHONUNBUFFERED=1
+    roar run -- python train.py config/train_shakespeare_char.py \
+      --device=cuda --compile=False --wandb_log=True --wandb_project=nanogpt-puttest \
+      --max_iters=50 --eval_interval=25 --eval_iters=20 --log_interval=10 --always_save_checkpoint=True
+  trace: off
+
+publish:
+  command: |
+    export PATH=/opt/pytorch/bin:$PATH
+    roar put out-shakespeare-char/ckpt.pt hf://reproducible-ai/nanogpt --public --yes -m "nanoGPT shakespeare_char (put test)"
+  trace: off
