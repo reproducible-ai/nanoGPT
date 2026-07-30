@@ -33,3 +33,9 @@ train:
       --device=cuda --compile=False \
       --wandb_log=True --wandb_project=nanogpt-shakespeare-char --wandb_run_name=repro-t4
   trace: off
+
+publish:
+  command: |
+    export PATH=/opt/pytorch/bin:$PATH
+    roar put out-shakespeare-char/ckpt.pt hf://reproducible-ai/nanogpt --public --yes --no-tag -m "nanoGPT shakespeare_char reproduction (converged)"
+  trace: off
