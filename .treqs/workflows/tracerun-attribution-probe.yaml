@@ -1,0 +1,13 @@
+name: trace-run attribution probe (minimal, cheap)
+
+# Purpose ([75]): verify whether a `trace: run` workflow — treqs auto-wraps the command
+# in roar, NO explicit `roar run`/`roar put` in the yaml — published via
+# `--lineage-mode public` ALSO lands ANONYMOUS per-node users (session createdBy / job
+# userId / artifact registeredBy = 00000000-…), same as the explicit-roar + trace:off
+# path we already verified on the converged row. Minimal single step, no GPU, no train.
+
+probe:
+  command: |
+    export PATH=/opt/pytorch/bin:$PATH
+    python -c "open('probe-out.txt','w').write('trace:run attribution probe for [75]\n')"
+  trace: run
