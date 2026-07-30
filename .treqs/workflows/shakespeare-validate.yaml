@@ -1,8 +1,10 @@
 name: nanoGPT shakespeare_char — validate (truncated; DAG/tag/reproduce fixes)
 
 # Truncated pass to validate the fixes on a real treqs DAG: ckpt.pt captured as a
-# train OUTPUT (mnist gitignore rule), always-tag (no --no-tag), DO_NOT_TRACK out
-# of the workflow. Then a `roar reproduce` test. (unknown-user still expected.)
+# train OUTPUT (mnist gitignore rule), --no-tag INTERIM (agent can't push tags;
+# commit-on-master lets reproduce resolve via SHA — see frictions "tag tradespace"),
+# DO_NOT_TRACK out of the workflow. Run with `tr create --lineage-mode public` for
+# org attribution + TR backlink (treqs owns DAG publish server-to-server).
 
 secrets:
   - HF_TOKEN
@@ -33,5 +35,5 @@ train:
 publish:
   command: |
     export PATH=/opt/pytorch/bin:$PATH
-    roar put out-shakespeare-char/ckpt.pt hf://reproducible-ai/nanogpt/validate --public --yes -m "nanoGPT shakespeare_char (validate)"
+    roar put out-shakespeare-char/ckpt.pt hf://reproducible-ai/nanogpt/validate --public --yes --no-tag -m "nanoGPT shakespeare_char (validate)"
   trace: off
