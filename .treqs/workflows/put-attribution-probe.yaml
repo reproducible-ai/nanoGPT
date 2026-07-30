@@ -5,6 +5,12 @@ name: roar-put attribution probe (explicit roar, post [75])
 # whether, after [75], (a) the treqs first-party DAG attributes to the filer, and
 # (b) the workflow's own `roar put` client DAG is still anonymous (agent has no glaas login).
 
+setup:
+  command: |
+    export PATH=/opt/pytorch/bin:$PATH
+    roar init || true
+  trace: off
+
 step:
   command: |
     export PATH=/opt/pytorch/bin:$PATH
