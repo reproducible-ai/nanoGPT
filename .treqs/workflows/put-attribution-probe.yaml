@@ -1,0 +1,18 @@
+name: roar-put attribution probe (explicit roar, post [75])
+
+# Minimal realistic example: explicit `roar run` + `roar put`, trace:off — the same
+# shape as our converged reproduction. Run via --lineage-mode public. Purpose: see
+# whether, after [75], (a) the treqs first-party DAG attributes to the filer, and
+# (b) the workflow's own `roar put` client DAG is still anonymous (agent has no glaas login).
+
+step:
+  command: |
+    export PATH=/opt/pytorch/bin:$PATH
+    roar run -- python -c "open('put-probe.txt','w').write('roar put attribution probe post-75\n')"
+  trace: off
+
+publish:
+  command: |
+    export PATH=/opt/pytorch/bin:$PATH
+    roar put put-probe.txt hf://reproducible-ai/nanogpt/put-probe --public --yes --no-tag -m "put attribution probe"
+  trace: off
