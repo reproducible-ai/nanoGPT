@@ -1,0 +1,55 @@
+name: nanoGPT shakespeare_char — validate ATTRIBUTED (config-only, PAT auth.json)
+
+# Proves attributed + SINGLE-DAG via config alone (no --lineage-mode).
+# The workflow's own `roar put` registers ONE attributed DAG because the agent is
+# authenticated with a treqs PAT (glaas forwards bearers to treqs-api). Queue this
+# WITHOUT --lineage-mode so treqs mints no second DAG.
+#
+# CLEAN FOR THE END REPRODUCER: the auth lives entirely in the UNTRACED `setup`
+# stage, which `roar reproduce` does NOT re-run (it re-runs only prepare/train/put).
+# The auth is AMBIENT + guarded: written only if the secret is present (our agent),
+# no-op + identical commands otherwise (a visitor's `roar put` runs anonymously).
+# Nothing campaign-specific is committed: auth.json + `roar scope use` both write to
+# the gitignored .roar/ + ~/.config at runtime; the reproducer's clone has neither.
+
+secrets:
+  - HF_TOKEN            # model-byte upload to HF (unchanged)
+  - ROAR_GLAAS_TOKEN    # campaign treqs PAT; setup writes auth.json + binds org scope
+
+setup:
+  command: |
+    export PATH=/opt/pytorch/bin:$PATH
+    python -m pip install --quiet requests || true
+    # Ambient glaas auth — attributed when the secret is present (our runs),
+    # anonymous + identical commands when absent (end reproducers never run setup).
+    if [ -n "$ROAR_GLAAS_TOKEN" ]; then
+      mkdir -p "$HOME/.config/roar"
+      ( umask 077; printf '{"version":1,"provider":"treqs","access_token":"%s"}\n' "$ROAR_GLAAS_TOKEN" > "$HOME/.config/roar/auth.json" )
+      roar scope use reproducible-ai/nanogpt || echo "[auth] scope bind failed (will attribute to token user)"
+      echo "[auth] authenticated; scope -> reproducible-ai/nanogpt"
+    else
+      echo "[auth] no token present — anonymous (reproducer path)"
+    fi
+    roar --version
+  trace: off
+
+prepare:
+  command: |
+    export PATH=/opt/pytorch/bin:$PATH
+    roar run -- python data/shakespeare_char/prepare.py
+  trace: off
+
+train:
+  command: |
+    export PATH=/opt/pytorch/bin:$PATH
+    export ROAR_WANDB_TO_TRACKIO=1 TRACKIO_SPACE_ID=reproducible-ai/experiments PYTHONUNBUFFERED=1
+    roar run -- python train.py config/train_shakespeare_char.py \
+      --device=cuda --compile=False --wandb_log=True --wandb_project=nanogpt-validate-attributed \
+      --max_iters=50 --eval_interval=25 --eval_iters=20 --always_save_checkpoint=True
+  trace: off
+
+publish:
+  command: |
+    export PATH=/opt/pytorch/bin:$PATH
+    roar put out-shakespeare-char/ckpt.pt hf://reproducible-ai/nanogpt/validate-attributed --public --yes --no-tag -m "nanoGPT shakespeare_char (validate, attributed via PAT)"
+  trace: off
