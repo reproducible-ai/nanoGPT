@@ -1,0 +1,37 @@
+name: nanoGPT shakespeare_char — validate (truncated; DAG/tag/reproduce fixes)
+
+# Truncated pass to validate the fixes on a real treqs DAG: ckpt.pt captured as a
+# train OUTPUT (mnist gitignore rule), always-tag (no --no-tag), DO_NOT_TRACK out
+# of the workflow. Then a `roar reproduce` test. (unknown-user still expected.)
+
+secrets:
+  - HF_TOKEN
+
+setup:
+  command: |
+    export PATH=/opt/pytorch/bin:$PATH
+    python -m pip install --quiet requests || true
+    roar --version
+    roar init || true
+  trace: off
+
+prepare:
+  command: |
+    export PATH=/opt/pytorch/bin:$PATH
+    roar run -- python data/shakespeare_char/prepare.py
+  trace: off
+
+train:
+  command: |
+    export PATH=/opt/pytorch/bin:$PATH
+    export ROAR_WANDB_TO_TRACKIO=1 TRACKIO_SPACE_ID=reproducible-ai/experiments PYTHONUNBUFFERED=1
+    roar run -- python train.py config/train_shakespeare_char.py \
+      --device=cuda --compile=False --wandb_log=True --wandb_project=nanogpt-validate \
+      --max_iters=50 --eval_interval=25 --eval_iters=20 --always_save_checkpoint=True
+  trace: off
+
+publish:
+  command: |
+    export PATH=/opt/pytorch/bin:$PATH
+    roar put out-shakespeare-char/ckpt.pt hf://reproducible-ai/nanogpt/validate --public --yes -m "nanoGPT shakespeare_char (validate)"
+  trace: off
