@@ -16,7 +16,6 @@ setup:
     python -m pip install --quiet requests || true
     roar --version
     roar init || true
-    roar config set git.push_tags_on_register never || true
   trace: off
 
 prepare:
@@ -28,7 +27,7 @@ prepare:
 train:
   command: |
     export PATH=/opt/pytorch/bin:$PATH
-    export ROAR_WANDB_TO_TRACKIO=1 TRACKIO_SPACE_ID=reproducible-ai/experiments DO_NOT_TRACK=1 PYTHONUNBUFFERED=1
+    export ROAR_WANDB_TO_TRACKIO=1 TRACKIO_SPACE_ID=reproducible-ai/experiments PYTHONUNBUFFERED=1
     roar run -- python train.py config/train_shakespeare_char.py \
       --device=cuda --compile=False \
       --wandb_log=True --wandb_project=nanogpt-shakespeare-char --wandb_run_name=repro-t4
@@ -37,5 +36,5 @@ train:
 publish:
   command: |
     export PATH=/opt/pytorch/bin:$PATH
-    roar put out-shakespeare-char/ckpt.pt hf://reproducible-ai/nanogpt --public --yes --no-tag -m "nanoGPT shakespeare_char reproduction (converged)"
+    roar put out-shakespeare-char/ckpt.pt hf://reproducible-ai/nanogpt --public --yes -m "nanoGPT shakespeare_char reproduction (converged)"
   trace: off
