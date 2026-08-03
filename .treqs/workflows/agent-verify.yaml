@@ -1,0 +1,10 @@
+name: agent env verify (treqs-agent #13)
+
+# Diagnostic: prints the job subprocess env so we can confirm the agent injects
+# DO_NOT_TRACK=1 (#13) and runs jobs under /var/lib/treqs-agent/work. No secrets.
+verify:
+  command: |
+    echo "AGENT-VERIFY pwd=$(pwd)"
+    echo "AGENT-VERIFY DO_NOT_TRACK=[${DO_NOT_TRACK:-UNSET}]"
+    echo "AGENT-VERIFY TREQS_AGENT_WORK_DIR=[${TREQS_AGENT_WORK_DIR:-UNSET}]"
+  trace: off
