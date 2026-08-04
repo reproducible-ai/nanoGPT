@@ -1,0 +1,45 @@
+name: nanoGPT shakespeare_char — cost validation, larger spend (~$0.50-$1.00)
+
+# treqs [4.5a]/[4.5b]: same purpose as cost-validation.yaml (no HF secrets, no
+# publish stage - see that file's header) but calibrated for a bigger real
+# AWS charge, to validate the cost estimate against actual billing at a less
+# trivially-small amount than cost-validation.yaml's ~$0.03 run.
+#
+# Calibrated against a real measurement: this compute target's g4dn.xlarge
+# billed 6c for 6 real minutes on the last run (=$0.60/hr). Real training
+# (200 iters, up from cost-validation.yaml's 50) does a bit more actual GPU
+# work, then `hold` pads with a plain sleep to bring total instance runtime
+# to ~70-75 real minutes (~$0.70-0.75) - EC2 bills for wall-clock instance
+# time regardless of GPU utilization, so a sleep accrues real, predictable
+# cost without having to guess exact iteration throughput. Budgets ~5-6min
+# of slack above known boot/setup/prepare/train overhead so this lands
+# comfortably mid-range even with some timing variance.
+
+setup:
+  command: |
+    export PATH=/opt/pytorch/bin:$PATH
+    python -m pip install --quiet requests || true
+    roar --version
+    roar init || true
+  trace: off
+
+prepare:
+  command: |
+    export PATH=/opt/pytorch/bin:$PATH
+    roar run -- python data/shakespeare_char/prepare.py
+  trace: off
+
+train:
+  command: |
+    export PATH=/opt/pytorch/bin:$PATH
+    export PYTHONUNBUFFERED=1
+    roar run -- python train.py config/train_shakespeare_char.py \
+      --device=cuda --compile=False \
+      --max_iters=200 --eval_interval=100 --eval_iters=20 --log_interval=20 --always_save_checkpoint=True
+  trace: off
+
+hold:
+  command: |
+    echo "Padding instance runtime toward the ~\$0.50-\$1.00 target (real EC2 billing accrues during this sleep same as during training)."
+    sleep 4140
+  trace: off
