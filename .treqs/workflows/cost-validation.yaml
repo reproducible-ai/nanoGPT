@@ -1,0 +1,31 @@
+name: nanoGPT shakespeare_char — cost validation (no secrets, no publish)
+
+# treqs [4.5a]: run against a real on-demand GPU instance purely to compare
+# TReqs' estimated cost against actual AWS billing. No HF upload, no
+# wandb/trackio sync (train.py defaults wandb_log=False when the flag is
+# omitted) - both would need HF_TOKEN, which this compute target doesn't
+# have configured on purpose. Truncated (max_iters=50) to keep the run cheap
+# while still producing a real, non-trivial GPU runtime to bill against.
+
+setup:
+  command: |
+    export PATH=/opt/pytorch/bin:$PATH
+    python -m pip install --quiet requests || true
+    roar --version
+    roar init || true
+  trace: off
+
+prepare:
+  command: |
+    export PATH=/opt/pytorch/bin:$PATH
+    roar run -- python data/shakespeare_char/prepare.py
+  trace: off
+
+train:
+  command: |
+    export PATH=/opt/pytorch/bin:$PATH
+    export PYTHONUNBUFFERED=1
+    roar run -- python train.py config/train_shakespeare_char.py \
+      --device=cuda --compile=False \
+      --max_iters=50 --eval_interval=25 --eval_iters=20 --log_interval=10 --always_save_checkpoint=True
+  trace: off
