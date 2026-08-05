@@ -1,0 +1,42 @@
+name: nanoGPT shakespeare_char — cost validation, larger-2 spend (~$0.50-$0.75)
+
+# treqs [4.5a]/[4.5b]: same purpose as the other cost-validation-*.yaml
+# workflows (no HF secrets, no publish stage). Calibrated for a target range
+# between the "large" ($0.50-$1.00) and "medium" ($0.25-$0.50) workflows,
+# using the REAL billed rate confirmed via AWS Cost Explorer (~$0.526/hr)
+# alongside treqs' own tracked rate (~$0.60/hr), so both land inside range:
+#   treqs estimate = runtime x $0.60/hr, real = runtime x $0.526/hr
+#   target ~66min total instance runtime keeps both within $0.50-$0.75.
+#
+# Fixed overhead (boot/queue/register ~132s + setup ~38s + prepare ~15s +
+# train@200iters ~253s = ~438s/~7.3min) measured from prior runs on this
+# account/AMI. `hold` pads with sleep 3540 (59min) to reach ~66min total.
+
+setup:
+  command: |
+    export PATH=/opt/pytorch/bin:$PATH
+    python -m pip install --quiet requests || true
+    roar --version
+    roar init || true
+  trace: off
+
+prepare:
+  command: |
+    export PATH=/opt/pytorch/bin:$PATH
+    roar run -- python data/shakespeare_char/prepare.py
+  trace: off
+
+train:
+  command: |
+    export PATH=/opt/pytorch/bin:$PATH
+    export PYTHONUNBUFFERED=1
+    roar run -- python train.py config/train_shakespeare_char.py \
+      --device=cuda --compile=False \
+      --max_iters=200 --eval_interval=100 --eval_iters=20 --log_interval=20 --always_save_checkpoint=True
+  trace: off
+
+hold:
+  command: |
+    echo "Padding instance runtime toward the ~\$0.50-\$0.75 target (real EC2 billing accrues during this sleep same as during training)."
+    sleep 3540
+  trace: off
