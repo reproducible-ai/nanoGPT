@@ -12,3 +12,9 @@ env/
 venv/
 # campaign / roar
 .roar/
+
+# --- reproduction outputs (scaffold_row.py: mnist rule) ---
+# file-pattern ignore + tracked .gitkeep so each dir survives a clean
+# checkout and roar keeps the outputs in lineage. NEVER dir-ignore.
+out-shakespeare-char/*
+!out-shakespeare-char/.gitkeep
