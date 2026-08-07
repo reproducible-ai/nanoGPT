@@ -30,6 +30,11 @@ setup:
     sudo rm -rf /opt/roar-0.4.4.dev0
     sudo /opt/pytorch/bin/python -m venv /opt/roar-0.4.4.dev0
     sudo /opt/roar-0.4.4.dev0/bin/pip install --quiet --disable-pip-version-check /tmp/roar_wheel/roar_cli-0.4.4.dev0-cp310-abi3-linux_x86_64.whl
+    # `roar put hf://...` needs huggingface_hub, which the wheel declares only as a
+    # dev extra — so an isolated roar install can trace and label but not publish.
+    # Assert it up front rather than discovering it after the training stage.
+    sudo /opt/roar-0.4.4.dev0/bin/pip install --quiet --disable-pip-version-check 'huggingface_hub>=0.20.0'
+    /opt/roar-0.4.4.dev0/bin/python -c "import huggingface_hub as h; print('huggingface_hub', h.__version__)"
     sudo ln -sf /opt/roar-0.4.4.dev0/bin/roar /usr/local/bin/roar
     sudo ln -sf /opt/roar-0.4.4.dev0/bin/roar-worker /usr/local/bin/roar-worker
     test "$(roar --version | grep -o '[0-9][^ ]*$')" = "0.4.4.dev0" || \
