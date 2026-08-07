@@ -6,13 +6,32 @@ name: nanogpt-shakespeare-char reproduction
 
 secrets:
   - HF_TOKEN            # wandb->trackio sync + roar put upload
+  - ROAR_WHEEL_URL      # presigned URL for the pinned roar wheel (setup stage)
 
 setup:
   command: |
     export PATH=/opt/pytorch/bin:$PATH
     python -m pip install --quiet requests || true
+    rm -rf *.egg-info src/*.egg-info
+    curl -sS -o /tmp/roar_wheel/roar_cli-0.4.4.dev0-cp310-abi3-linux_x86_64.whl --create-dirs "$ROAR_WHEEL_URL"
+    echo "a5bcde02f6a1f7bfa29ee52044f69fb72a87a1f3b6867db6911e8e82749415f0  /tmp/roar_wheel/roar_cli-0.4.4.dev0-cp310-abi3-linux_x86_64.whl" | sha256sum -c -
+    sudo rm -rf /usr/local/lib/python3.10/dist-packages/roar_cli-*.dist-info \
+                /usr/local/lib/python3.10/dist-packages/roar \
+                /opt/pytorch/lib/python3.12/site-packages/roar_cli-*.dist-info \
+                /opt/pytorch/lib/python3.12/site-packages/roar \
+                /usr/local/bin/roar /usr/local/bin/roar-worker \
+                /opt/pytorch/bin/roar /opt/pytorch/bin/roar-worker \
+                /usr/local/lib/python3.10/dist-packages/roar_inject.pth \
+                /opt/pytorch/lib/python3.12/site-packages/roar_inject.pth
+    uv tool install --python 3.12.10 --force /tmp/roar_wheel/roar_cli-0.4.4.dev0-cp310-abi3-linux_x86_64.whl
+    sudo ln -sf /root/.local/bin/roar /usr/local/bin/roar
+    test "$(roar --version | grep -o '[0-9][^ ]*$')" = "0.4.4.dev0" || \
+      { echo "WRONG ROAR: $(roar --version)"; exit 1; }
+    test "$(ls /usr/local/bin/../lib/python3.10/dist-packages/roar/bin 2>/dev/null | wc -l)" != "0" || \
+      test "$(ls $(dirname $(readlink -f $(command -v roar)))/../lib/python*/site-packages/roar/bin | wc -l)" -ge 6 || \
+      { echo "NO TRACER BINARIES"; exit 1; }
     roar --version
-    roar tracer use preload   # D16: pinned; NEVER ptrace
+    roar tracer use preload
     roar tracer
     roar init || true
   trace: off
@@ -28,17 +47,17 @@ train:
   command: |
     export PATH=/opt/pytorch/bin:$PATH
     export TRACKIO_SPACE_ID=reproducible-ai/experiments PYTHONUNBUFFERED=1
-    roar run -n train --wandb-to-trackio -- python train.py config/train_shakespeare_char.py --device=cuda --compile=False --wandb_log=True --wandb_project=nanogpt-shakespeare-char --max_iters=5000 --always_save_checkpoint=True
+    roar run -n train --wandb-to-trackio -- python train.py config/train_shakespeare_char.py --compile=False
   trace: off
 
 label:
   command: |
     export PATH=/opt/pytorch/bin:$PATH
-    roar label set artifact out-shakespeare-char/ckpt.pt model.name=nanogpt-shakespeare-char model.version=1 license.id=MIT license.name='MIT License' description='nanoGPT shakespeare_char — character-level GPT reproduction (converged, 5000 iters)' documentation.url=https://github.com/reproducible-ai/nanoGPT/blob/master/README.md
+    roar label set artifact out-shakespeare-char/ckpt.pt model.name=nanogpt-shakespeare-char model.version=1 license.id=MIT license.name='MIT License' description='nanoGPT character-level Shakespeare: a 6-layer, 6-head, 384-dim GPT (~10.7M params) trained from scratch on the tiny-Shakespeare corpus' documentation.url=https://github.com/reproducible-ai/nanoGPT/blob/master/README.md
   trace: off
 
 publish:
   command: |
     export PATH=/opt/pytorch/bin:$PATH
-    roar put out-shakespeare-char/ckpt.pt hf://reproducible-ai/nanogpt --public --yes --no-tag -m "nanoGPT shakespeare_char — converged reproduction, 5000 iters, playbook v1.0"
+    roar put out-shakespeare-char/ckpt.pt hf://reproducible-ai/nanogpt --public --yes --no-tag -m "nanoGPT shakespeare_char: 6-layer char-level GPT (~10.7M params), full 5000-iter recipe on tiny-Shakespeare"
   trace: off
