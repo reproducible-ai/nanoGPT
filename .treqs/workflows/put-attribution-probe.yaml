@@ -1,9 +1,5 @@
 name: roar-put attribution probe (explicit roar, post [75])
 
-# Minimal realistic example: explicit `roar run` + `roar put`, trace:off — the same
-# shape as our converged reproduction. Run via --lineage-mode public. Purpose: see
-# whether, after [75], (a) the treqs first-party DAG attributes to the filer, and
-# (b) the workflow's own `roar put` client DAG is still anonymous (agent has no glaas login).
 
 setup:
   command: |
